@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adversarial Training: Interactive Recap</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(20, 20, 40, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            border: 2px solid rgba(100, 150, 255, 0.3);
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(100, 150, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #0099ff, #6366f1);
+            width: 100%;
+            animation: slideProgress 20s linear forwards;
+        }
+
+        @keyframes slideProgress {
+            0% { width: 100%; background: linear-gradient(90deg, #00d4ff, #0099ff, #6366f1); }
+            75% { width: 25%; background: linear-gradient(90deg, #00d4ff, #0099ff, #6366f1); }
+            100% { width: 0%; background: linear-gradient(90deg, #ff4444, #cc0000); }
+        }
+
+        .slide {
+            display: none;
+            padding: 60px 40px;
+            text-align: center;
+            min-height: 600px;
+            opacity: 0;
+            animation: fadeIn 0.8s ease-in forwards;
+        }
+
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .slide h2 {
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #00d4ff, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .visual-container {
+            height: 300px;
+            margin: 40px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        .summary {
+            font-size: 1.2em;
+            color: #e0e0ff;
+            line-height: 1.8;
+            margin: 30px 0;
+            font-weight: 300;
+        }
+
+        /* Slide 1: Boxing Analogy */
+        .boxing-ring {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            border: 3px solid #00d4ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+            border-radius: 10px;
+        }
+
+        .boxer {
+            font-size: 60px;
+            animation: bobbing 1.5s ease-in-out infinite;
+        }
+
+        .opponent {
+            font-size: 60px;
+            position: absolute;
+            animation: circling 3s linear infinite;
+        }
+
+        @keyframes bobbing {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes circling {
+            0% { transform: translate(80px, 0px); }
+            25% { transform: translate(0px, 80px); }
+            50% { transform: translate(-80px, 0px); }
+            75% { transform: translate(0px, -80px); }
+            100% { transform: translate(80px, 0px); }
+        }
+
+        /* Slide 2: Brittle vs Robust */
+        .boundary-diagram {
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .boundary {
+            width: 150px;
+            height: 150px;
+            border: 2px solid;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .brittle {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .robust {
+            border-color: #51cf66;
+            background: rgba(81, 207, 102, 0.1);
+        }
+
+        .data-point {
+            font-size: 30px;
+            animation: jitter 0.3s ease-in-out infinite;
+        }
+
+        .boundary-line {
+            position: absolute;
+            width: 100%;
+            height: 3px;
+            background: currentColor;
+        }
+
+        .brittle .boundary-line {
+            background: #ff6b6b;
+            animation: wiggling 0.4s ease-in-out infinite;
+        }
+
+        .robust .boundary-line {
+            background: #51cf66;
+            transform: scaleX(1.3);
+        }
+
+        @keyframes jitter {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(2px, -2px); }
+            50% { transform: translate(-2px, 2px); }
+            75% { transform: translate(2px, 2px); }
+        }
+
+        @keyframes wiggling {
+            0%, 100% { transform: scaleX(0.8); }
+            50% { transform: scaleX(1.2); }
+        }
+
+        /* Slide 3: Training Loop */
+        .training-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .flow-box {
+            width: 100px;
+            height: 100px;
+            border: 2px solid #00d4ff;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 212, 255, 0.1);
+            font-size: 40px;
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .flow-box:nth-child(2) {
+            animation-delay: 0.5s;
+        }
+
+        .flow-box:nth-child(3) {
+            animation-delay: 1s;
+        }
+
+        .flow-box:nth-child(4) {
+            animation-delay: 1.5s;
+        }
+
+        .arrow {
+            font-size: 30px;
+            color: #00d4ff;
+            animation: floating 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+            0%, 100% { 
+                box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.5);
+                transform: scale(1);
+            }
+            50% { 
+                box-shadow: 0 0 20px 10px rgba(0, 212, 255, 0);
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes floating {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
+        }
+
+        /* Slide 4: Adversarial Examples */
+        .adversarial-grid {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .example-card {
+            width: 140px;
+            height: 140px;
+            border: 2px solid;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+            position: relative;
+        }
+
+        .clean {
+            border-color: #51cf66;
+            background: rgba(81, 207, 102, 0.1);
+        }
+
+        .adversarial {
+            border-color: #ff8c42;
+            background: rgba(255, 140, 66, 0.1);
+            animation: shake 0.3s ease-in-out infinite;
+        }
+
+        .label {
+            position: absolute;
+            bottom: -30px;
+            font-size: 0.85em;
+            color: #b0b0ff;
+            white-space: nowrap;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(3px, -3px) rotate(-1deg); }
+            50% { transform: translate(-3px, 3px) rotate(1deg); }
+            75% { transform: translate(3px, 3px) rotate(-1deg); }
+        }
+
+        /* Slide 5: Code Loop */
+        .code-structure {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #6366f1;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: left;
+            font-family: 'Courier New', monospace;
+            color: #00ff88;
+            font-size: 0.9em;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-highlight {
+            background: rgba(99, 102, 241, 0.3);
+            padding: 2px 6px;
+            border-radius: 3px;
+            animation: highlight-pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes highlight-pulse {
+            0%, 100% { background: rgba(99, 102, 241, 0.1); }
+            50% { background: rgba(99, 102, 241, 0.5); }
+        }
+
+        /* Slide 6: Accuracy-Robustness Tradeoff */
+        .tradeoff-chart {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .chart-axes {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            border-left: 2px solid #6366f1;
+            border-bottom: 2px solid #6366f1;
+            margin-top: 30px;
+        }
+
+        .axis-label {
+            position: absolute;
+            color: #b0b0ff;
+            font-size: 0.9em;
+        }
+
+        .robustness-curve {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            width: 90%;
+            height: 90%;
+        }
+
+        .curve-line {
+            position: absolute;
+            width: 200px;
+            height: 3px;
+            background: linear-gradient(90deg, #51cf66, #ff8c42);
+            bottom: 0;
+            left: 0;
+            transform-origin: left bottom;
+            animation: curving 3s ease-in-out infinite;
+        }
+
+        .data-dot {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #00d4ff;
+            animation: dot-dance 3s ease-in-out infinite;
+        }
+
+        @keyframes curving {
+            0% { transform: rotate(0deg) scaleX(1); }
+            50% { transform: rotate(-30deg) scaleX(1.2); }
+            100% { transform: rotate(0deg) scaleX(1); }
+        }
+
+        @keyframes dot-dance {
+            0% { bottom: 20px; left: 30px; }
+            50% { bottom: 100px; left: 150px; }
+            100% { bottom: 20px; left: 30px; }
+        }
+
+        /* Slide 7: Key Takeaway */
+        .takeaway-highlight {
+            font-size: 1.5em;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(99, 102, 241, 0.2));
+            border-radius: 15px;
+            border-left: 4px solid #00d4ff;
+            margin: 30px 0;
+            animation: glow-border 2s ease-in-out infinite;
+        }
+
+        @keyframes glow-border {
+            0%, 100% { border-left-color: #00d4ff; box-shadow: 0 0 20px rgba(0, 212, 255, 0.3); }
+            50% { border-left-color: #6366f1; box-shadow: 0 0 30px rgba(99, 102, 241, 0.5); }
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 1em;
+            background: linear-gradient(135deg, #6366f1, #00d4ff);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .slide-counter {
+            padding: 30px;
+            text-align: center;
+            color: #b0b0ff;
+            font-size: 0.95em;
+        }
+
+        .emoji-large {
+            font-size: 80px;
+            margin: 20px 0;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+
+        <!-- Slide 1: Boxing Analogy Hook -->
+        <div class="slide active">
+            <h2>🥊 Champions Need Strong Opponents</h2>
+            <div class="visual-container">
+                <div style="font-size: 60px; margin: 20px;">
+                    🥊 ↔️ 👊
+                </div>
+                <p style="color: #00d4ff; font-size: 1.3em; margin-top: 20px;">Spar Repeatedly = Get Strong</p>
+                <div style="font-size: 40px; margin: 20px;">
+                    🤖 + ⚔️ = 🛡️
+                </div>
+            </div>
+            <p class="summary">
+                Train models on attacks during training, not just clean data. 
+                This forces them to learn defensive strategies. <strong>Inoculation through exposure.</strong>
+            </p>
+        </div>
+
+        <!-- Slide 2: Why Standard Training Fails -->
+        <div class="slide">
+            <h2>🔴 Clean Data Creates Brittle Models</h2>
+            <div class="visual-container">
+                <div style="display: flex; gap: 40px; align-items: center; justify-content: center;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 50px;">📊</div>
+                        <p style="color: #ff6b6b; margin-top: 10px; font-size: 0.9em;">Clean Only</p>
+                        <p style="font-size: 2em; color: #ff6b6b;">❌ Fails</p>
+                    </div>
+                    <div style="font-size: 2em; color: #6366f1;">+</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 50px;">⚔️</div>
+                        <p style="color: #51cf66; margin-top: 10px; font-size: 0.9em;">+ Attacks</p>
+                        <p style="font-size: 2em; color: #51cf66;">✅ Works</p>
+                    </div>
+                </div>
+            </div>
+            <p class="summary">
+                Standard training ignores distribution shift. Adding adversarial examples teaches models 
+                to learn robust patterns that generalize across perturbations.
+            </p>
+        </div>
+
+        <!-- Slide 3: The Training Loop -->
+        <div class="slide">
+            <h2>⚙️ The Adversarial Training Loop</h2>
+            <div class="visual-container">
+                <div style="display: flex; gap: 15px; align-items: center; justify-content: center; flex-wrap: wrap;">
+                    <div style="font-size: 40px;">📦</div>
+                    <div style="font-size: 30px; color: #00d4ff;">→</div>
+                    <div style="font-size: 40px; animation: shake 0.5s infinite;">⚡</div>
+                    <div style="font-size: 30px; color: #00d4ff;">→</div>
+                    <div style="font-size: 40px;">🧠</div>
+                    <div style="font-size: 30px; color: #00d4ff;">→</div>
+                    <div style="font-size: 40px; animation: bounce 2s infinite;">📈</div>
+                </div>
+            </div>
+            <p class="summary">
+                Load batch (📦) → Generate adversarial (⚡) → Train both (🧠) → Update weights (📈) → Repeat. 
+                This teaches models to defend against perturbations while maintaining accuracy.
+            </p>
+        </div>
+
+        <!-- Slide 4: Adversarial Examples Generation -->
+        <div class="slide">
+            <h2>⚡ Making Adversarial Examples</h2>
+            <div class="visual-container">
+                <div style="display: flex; gap: 30px; align-items: center; justify-content: center;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px;">🐱</div>
+                        <p style="color: #51cf66; font-size: 0.9em;">Clean</p>
+                    </div>
+                    <div style="font-size: 2em; color: #ff8c42; animation: shake 0.3s infinite;">+ ε</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 60px; animation: shake 0.3s infinite;">🐱</div>
+                        <p style="color: #ff8c42; font-size: 0.9em;">Attacked</p>
+                    </div>
+                    <div style="font-size: 2em; color: #6366f1; animation: bounce 2s infinite;">→ 🧠 Learns!</div>
+                </div>
+            </div>
+            <p class="summary">
+                Gradient-based attacks (PGD, FGSM) add small perturbations. Model trains on both, 
+                learning to classify correctly despite pixel-level attacks.
+            </p>
+        </div>
+
+        <!-- Slide 5: Code Implementation -->
+        <div class="slide">
+            <h2>💻 Python Implementation</h2>
+            <div class="visual-container">
+                <div style="background: rgba(0, 0, 0, 0.6); border: 1px solid #6366f1; border-radius: 10px; padding: 20px; font-family: monospace; color: #00ff88; font-size: 0.85em; text-align: left; max-width: 400px;">
+                    📦 for batch in data:<br>
+                    ⚡ adv = pgd_attack(model, batch)<br>
+                    🧠 combined = [batch, adv]<br>
+                    📈 loss = model.train(combined)<br>
+                    🔄 repeat
+                </div>
+            </div>
+            <p class="summary">
+                Each epoch generates fresh adversarial examples and trains on combined batches. 
+                This forces adaptive learning across diverse attack strategies.
+            </p>
+        </div>
+
+        <!-- Slide 6: Accuracy-Robustness Tradeoff -->
+        <div class="slide">
+            <h2>⚖️ The Accuracy-Robustness Tradeoff</h2>
+            <div class="visual-container">
+                <div style="display: flex; gap: 50px; align-items: center; justify-content: center;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 50px;">📊</div>
+                        <p style="color: #51cf66; margin-top: 10px;">Clean Accuracy</p>
+                        <p style="font-size: 1.3em; color: #51cf66; margin-top: 5px;">↓ Slightly</p>
+                    </div>
+                    <div style="font-size: 3em; color: #ff8c42; animation: bounce 2s infinite;">↔️</div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 50px;">🛡️</div>
+                        <p style="color: #00d4ff; margin-top: 10px;">Robustness</p>
+                        <p style="font-size: 1.3em; color: #00d4ff; margin-top: 5px;">↑ Much More</p>
+                    </div>
+                </div>
+            </div>
+            <p class="summary">
+                Trading small clean accuracy loss for major robustness gains. 
+                Choose based on task: security-critical = prioritize robustness, general tasks = balance both.
+            </p>
+        </div>
+
+        <!-- Slide 7: Key Takeaway -->
+        <div class="slide">
+            <h2>🎯 Inoculation Through Exposure</h2>
+            <div class="visual-container">
+                <div style="font-size: 80px; animation: bounce 2s infinite;">💉</div>
+                <p style="font-size: 1.4em; color: #00d4ff; margin-top: 20px;">
+                    Train on attacks → Models become immune → Resist perturbations 🛡️
+                </p>
+            </div>
+            <p class="summary">
+                You can now: explain brittleness, implement adversarial training, analyze tradeoffs, 
+                and build resilient models. Ready to make your AI unbreakable? 🚀
+            </p>
+        </div>
+
+        <!-- Slide Counter -->
+        <div class="slide-counter">
+        <p style="color: #b0b0ff; font-size: 0.85em;">⏱️ 20 seconds per slide • Auto-plays • Press space to pause</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button id="prev-btn">⬅️ Previous</button>
+            <button id="play-pause-btn">⏸️ Pause</button>
+            <button id="next-btn">Next ➡️</button>
+        </div>
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        let isPlaying = true;
+        let autoPlayTimer;
+
+        function showSlide(n) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[n].classList.add('active');
+            document.getElementById('current-slide').textContent = n + 1;
+            
+            // Reset progress bar animation
+            const progressFill = document.querySelector('.progress-fill');
+            progressFill.style.animation = 'none';
+            setTimeout(() => {
+                progressFill.style.animation = 'slideProgress 20s linear forwards';
+            }, 10);
+        }
+
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            showSlide(currentSlide);
+        }
+
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+            showSlide(currentSlide);
+        }
+
+        function startAutoPlay() {
+            isPlaying = true;
+            document.getElementById('play-pause-btn').textContent = '⏸️ Pause';
+            autoPlayTimer = setInterval(nextSlide, 20000);
+        }
+
+        function stopAutoPlay() {
+            isPlaying = false;
+            document.getElementById('play-pause-btn').textContent = '▶️ Play';
+            clearInterval(autoPlayTimer);
+        }
+
+        document.getElementById('next-btn').addEventListener('click', () => {
+            nextSlide();
+            stopAutoPlay();
+        });
+
+        document.getElementById('prev-btn').addEventListener('click', () => {
+            prevSlide();
+            stopAutoPlay();
+        });
+
+        document.getElementById('play-pause-btn').addEventListener('click', () => {
+            if (isPlaying) {
+                stopAutoPlay();
+            } else {
+                startAutoPlay();
+            }
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+            if (e.key === ' ') {
+                e.preventDefault();
+                document.getElementById('play-pause-btn').click();
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+        startAutoPlay();
+    </script>
+</body>
+</html>
